@@ -14,7 +14,7 @@ key.properties
 **/*.jks
 
 # Firebase files (Future ke liye abhi se safe kar rahe hain)
-android/app/google-services.json
+**/google-services.json
 ios/Runner/GoogleService-Info.plist
 lib/firebase_options.dart
 macos/Runner/GoogleService-Info.plist
