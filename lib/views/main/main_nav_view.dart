@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:badges/badges.dart' as badges;
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../view_models/cart_vm.dart';
+
+
 import '../user/home/home_view.dart';
 import '../user/cart/cart_view.dart';
-import '../user/profile/order_history_view.dart';
 import '../wishlist/wishlist_view.dart';
+import '../user/profile/order_history_view.dart';
 
 class MainNavView extends StatefulWidget {
   const MainNavView({super.key});
@@ -17,73 +19,89 @@ class MainNavView extends StatefulWidget {
 }
 
 class _MainNavViewState extends State<MainNavView> {
-  int _currentIndex = 0;
+  int _currentIndex = 0; // Default: Home
 
+  // ✅ 4 SCREENS LIST (Order Important Hai!)
   final List<Widget> _screens = [
-    const HomeView(),
-    const WishlistView(),
-    const CartView(),
-    const OrderHistoryView(),
+    const HomeView(),          // Index 0
+    const WishlistView(),      // Index 1
+    const CartView(),          // Index 2
+    const OrderHistoryView(),  // Index 3 (Profile/Account)
   ];
 
   @override
   Widget build(BuildContext context) {
-    // Dynamic Colors for Dark/Light Mode
+    // 🎨 Theme Logic
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final selectedColor = isDark ? Colors.white : Colors.black;
-    final unselectedColor = isDark ? Colors.grey : Colors.grey;
-    final bgColor = isDark ? Colors.black : Colors.white;
+    final navBgColor = isDark ? Colors.black : Colors.white;
+    final selectedItemColor = isDark ? Colors.white : Colors.black;
+    final unselectedItemColor = Colors.grey;
 
     return Scaffold(
+      // ✅ IndexedStack State ko preserve rakhta hai (Refresh nahi hota)
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed,
 
-        // ✅ FIX: Use Dynamic Colors
-        backgroundColor: bgColor,
-        selectedItemColor: selectedColor,
-        unselectedItemColor: unselectedColor,
-        showUnselectedLabels: true,
+      // BOTTOM NAVIGATION BAR
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: isDark ? Colors.grey.shade900 : Colors.grey.shade200)),
+        ),
+        child: BottomNavigationBar(
+          backgroundColor: navBgColor,
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+          type: BottomNavigationBarType.fixed, // 4 items ke liye zaroori
+          selectedItemColor: selectedItemColor,
+          unselectedItemColor: unselectedItemColor,
+          showSelectedLabels: true,
+          showUnselectedLabels: false,
 
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: "Home",
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_border),
-            activeIcon: Icon(Icons.favorite),
-            label: "Wishlist",
-          ),
-          BottomNavigationBarItem(
-            icon: Consumer<CartViewModel>(
-              builder: (context, cartVM, child) {
-                return badges.Badge(
-                  position: badges.BadgePosition.topEnd(top: -10, end: -5),
-                  showBadge: cartVM.itemCount > 0,
-                  badgeContent: Text(
-                    cartVM.itemCount.toString(),
-                    style: const TextStyle(color: Colors.white, fontSize: 10),
-                  ),
-                  child: const Icon(Icons.shopping_cart_outlined),
-                );
-              },
+          selectedLabelStyle: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold),
+
+          items: [
+            // 1. Home
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: "Home",
             ),
-            activeIcon: const Icon(Icons.shopping_cart),
-            label: "Cart",
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: "Profile",
-          ),
-        ],
+
+            // 2. Wishlist
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.favorite_border),
+              activeIcon: Icon(Icons.favorite),
+              label: "Saved",
+            ),
+
+            // 3. Cart (Badge ke saath)
+            BottomNavigationBarItem(
+              icon: Consumer<CartViewModel>(
+                builder: (_, cartVM, __) => Badge(
+                  label: Text(cartVM.itemCount.toString()),
+                  isLabelVisible: cartVM.itemCount > 0,
+                  backgroundColor: Colors.red,
+                  child: const Icon(Icons.shopping_bag_outlined),
+                ),
+              ),
+              activeIcon: const Icon(Icons.shopping_bag),
+              label: "Bag",
+            ),
+
+            // 4. Account (Profile)
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: "Account",
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ class UserModel {
   final String name;
   final String phone;
   final String address;
+  final bool isAdmin; // ✅ Added: To identify Admin users
 
   UserModel({
     required this.uid,
@@ -11,6 +12,7 @@ class UserModel {
     required this.name,
     this.phone = '',
     this.address = '',
+    this.isAdmin = false, // Default is user
   });
 
   // Convert Firebase Document to User Object
@@ -21,6 +23,7 @@ class UserModel {
       name: data['name'] ?? '',
       phone: data['phone'] ?? '',
       address: data['address'] ?? '',
+      isAdmin: data['isAdmin'] ?? false, // ✅ Retrieve Role
     );
   }
 
@@ -32,6 +35,7 @@ class UserModel {
       'name': name,
       'phone': phone,
       'address': address,
+      'isAdmin': isAdmin, // ✅ Save Role
     };
   }
 }

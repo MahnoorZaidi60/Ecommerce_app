@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/constants/app_assets.dart';
-import '../../core/constants/app_strings.dart';
 import '../../core/constants/app_colors.dart';
 import '../../view_models/onboarding_vm.dart';
-import '../shared/custom_button.dart'; // We just made this!
 
 class OnboardingView extends StatefulWidget {
   const OnboardingView({super.key});
@@ -19,79 +16,148 @@ class _OnboardingViewState extends State<OnboardingView> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  // Data for the 3 slides
+  // 👟 Premium Shoe Images (Direct URLs for instant look)
   final List<Map<String, String>> _pages = [
     {
-      "title": AppStrings.onbTitle1,
-      "desc": AppStrings.onbDesc1,
-      "anim": AppAssets.animOnboarding1,
+      "title": "PREMIUM COMFORT",
+      "desc": "Experience the finest materials crafted for your feet. Walk with confidence and style.",
+      "image": "https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=600&auto=format&fit=crop", // Nike Shoe
     },
     {
-      "title": AppStrings.onbTitle2,
-      "desc": AppStrings.onbDesc2,
-      "anim": AppAssets.animOnboarding2,
+      "title": "LATEST TRENDS",
+      "desc": "Stay ahead of the fashion curve with our exclusive collection of sneakers and formals.",
+      "image": "https://images.unsplash.com/photo-1603808033192-082d6919d3e1?q=80&w=600&auto=format&fit=crop", // Fashion Shoe
     },
     {
-      "title": AppStrings.onbTitle3,
-      "desc": AppStrings.onbDesc3,
-      "anim": AppAssets.animOnboarding3,
+      "title": "SWIFT DELIVERY",
+      "desc": "Get your favorite pairs delivered to your doorstep faster than ever before.",
+      "image": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?q=80&w=600&auto=format&fit=crop", // Running Shoe
     },
   ];
 
   @override
   Widget build(BuildContext context) {
     final vm = Provider.of<OnboardingViewModel>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Windigo Colors
+    final textColor = isDark ? Colors.white : AppColors.black;
+    final subTextColor = isDark ? Colors.white70 : Colors.grey;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // Black/White auto
       body: SafeArea(
         child: Column(
           children: [
-            // 1. Skip Button (Top Right)
+            // 1. SKIP BUTTON (Top Right)
             Align(
               alignment: Alignment.topRight,
-              child: TextButton(
-                onPressed: () => vm.completeOnboarding(context),
-                child: const Text("Skip"),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16, top: 10),
+                child: TextButton(
+                  onPressed: () => vm.completeOnboarding(context),
+                  child: Text(
+                    "Skip",
+                    style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1
+                    ),
+                  ),
+                ),
               ),
             ),
 
-            // 2. Slidable Content
+            // 2. SLIDER CONTENT
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: _pages.length,
-                onPageChanged: (index) {
-                  setState(() => _currentPage = index);
-                },
+                onPageChanged: (index) => setState(() => _currentPage = index),
                 itemBuilder: (context, index) {
-                  return _buildPageContent(
-                    _pages[index]["title"]!,
-                    _pages[index]["desc"]!,
-                    _pages[index]["anim"]!,
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // A. IMAGE (Rounded Corners & Shadow)
+                        Container(
+                          height: 320,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              )
+                            ],
+                            image: DecorationImage(
+                              image: NetworkImage(_pages[index]["image"]!),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        // B. TITLE (Big & Bold)
+                        Text(
+                          _pages[index]["title"]!,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900, // Extra Bold
+                            color: textColor,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // C. DESCRIPTION
+                        Text(
+                          _pages[index]["desc"]!,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: subTextColor,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),
             ),
 
-            // 3. Dots Indicator & Button
+            // 3. BOTTOM CONTROLS (Dots & Button)
             Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
+              padding: const EdgeInsets.all(32.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Dots
+                  // DOTS INDICATOR
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
                       _pages.length,
-                          (index) => _buildDot(index),
+                          (index) => AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.only(right: 6),
+                        height: 6,
+                        width: _currentPage == index ? 24 : 6,
+                        decoration: BoxDecoration(
+                          color: _currentPage == index ? textColor : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 32),
 
-                  // Next / Get Started Button
-                  CustomButton(
-                    text: _currentPage == _pages.length - 1 ? "Get Started" : "Next",
+                  // NEXT / START BUTTON
+                  ElevatedButton(
                     onPressed: () {
                       if (_currentPage < _pages.length - 1) {
                         _pageController.nextPage(
@@ -102,63 +168,19 @@ class _OnboardingViewState extends State<OnboardingView> {
                         vm.completeOnboarding(context);
                       }
                     },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: textColor, // Black button on light mode
+                      foregroundColor: isDark ? Colors.black : Colors.white,
+                      shape: const CircleBorder(),
+                      padding: const EdgeInsets.all(20),
+                    ),
+                    child: const Icon(Icons.arrow_forward),
                   ),
                 ],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // Helper Widget for Page Content (Internal)
-  Widget _buildPageContent(String title, String desc, String anim) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Animation
-          Expanded(
-            flex: 3,
-            child: Lottie.network(anim, fit: BoxFit.contain),
-          ),
-          const SizedBox(height: 20),
-          // Title
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Description
-          Text(
-            desc,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey,
-            ),
-          ),
-          const Spacer(flex: 1),
-        ],
-      ),
-    );
-  }
-
-  // Helper for Dots
-  Widget _buildDot(int index) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      margin: const EdgeInsets.only(right: 8),
-      height: 8,
-      width: _currentPage == index ? 24 : 8,
-      decoration: BoxDecoration(
-        color: _currentPage == index ? AppColors.primary : Colors.grey[300],
-        borderRadius: BorderRadius.circular(4),
       ),
     );
   }

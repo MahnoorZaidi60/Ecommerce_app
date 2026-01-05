@@ -4,8 +4,9 @@ class ProductModel {
   final String description;
   final double price;
   final String imageUrl;
-  final String category;
-  final bool isSale; // For "Flash Sale" section
+  final String category; // e.g. "Sneakers", "Running", "Formal"
+  final bool isSale;     // Appears in "Flash Sale" slider
+  final List<String> availableSizes; // ✅ NEW: Essential for Shoes
 
   ProductModel({
     required this.id,
@@ -14,6 +15,7 @@ class ProductModel {
     required this.price,
     required this.imageUrl,
     required this.category,
+    required this.availableSizes, // Required
     this.isSale = false,
   });
 
@@ -23,11 +25,13 @@ class ProductModel {
       id: id,
       name: data['name'] ?? '',
       description: data['description'] ?? '',
-      // Safe double conversion (Firebase sometimes returns int)
       price: (data['price'] ?? 0).toDouble(),
       imageUrl: data['imageUrl'] ?? '',
-      category: data['category'] ?? 'General',
+      category: data['category'] ?? 'Sneakers',
       isSale: data['isSale'] ?? false,
+
+      // ✅ Safely converting Firestore List to List<String>
+      availableSizes: List<String>.from(data['availableSizes'] ?? []),
     );
   }
 
@@ -40,6 +44,7 @@ class ProductModel {
       'imageUrl': imageUrl,
       'category': category,
       'isSale': isSale,
+      'availableSizes': availableSizes, // ✅ Saving sizes
     };
   }
 }

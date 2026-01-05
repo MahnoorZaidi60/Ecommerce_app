@@ -5,6 +5,7 @@ class CustomButton extends StatelessWidget {
   final VoidCallback onPressed;
   final bool isLoading;
   final bool isOutlined;
+  final Color? backgroundColor; // Option to override color if needed
 
   const CustomButton({
     super.key,
@@ -12,33 +13,52 @@ class CustomButton extends StatelessWidget {
     required this.onPressed,
     this.isLoading = false,
     this.isOutlined = false,
+    this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    // If loading, show spinner
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    // 1. Loading Indicator (White or Black depending on theme)
+    final loader = SizedBox(
+      height: 20,
+      width: 20,
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        color: isOutlined ? Colors.black : Theme.of(context).canvasColor,
+      ),
+    );
 
-    // Styles are already defined in app_theme.dart, so we just use standard buttons
+    // 2. Outlined Button (Transparent BG, Border)
     if (isOutlined) {
-      return OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          side: BorderSide(color: Theme.of(context).primaryColor),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      return SizedBox(
+        width: double.infinity,
+        height: 55, // Fixed height for consistency
+        child: OutlinedButton(
+          onPressed: isLoading ? null : onPressed,
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: Theme.of(context).dividerColor),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: isLoading
+              ? loader
+              : Text(text, style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color)),
         ),
-        child: Text(text), // Outlined buttons take color from Theme primary
       );
     }
 
+    // 3. Filled Button (Black/White based on Theme)
     return SizedBox(
       width: double.infinity,
+      height: 55, // Fixed height matches TextFields
       child: ElevatedButton(
-        onPressed: onPressed,
-        child: Text(text),
+        onPressed: isLoading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: backgroundColor, // Uses Theme default if null
+          elevation: 0,
+        ),
+        child: isLoading
+            ? loader
+            : Text(text),
       ),
     );
   }

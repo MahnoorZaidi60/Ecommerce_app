@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/utils/routes.dart';
-import '../../../../core/utils/validators.dart';
-import '../../../../view_models/auth_vm.dart';
+
+import '../../../core/utils/routes.dart';
+import '../../../core/utils/validators.dart';
+import '../../../view_models/auth_vm.dart';
 import '../../shared/custom_button.dart';
 import '../../shared/custom_textfield.dart';
+
 
 
 class LoginView extends StatefulWidget {
@@ -23,123 +25,124 @@ class _LoginViewState extends State<LoginView> {
   @override
   Widget build(BuildContext context) {
     final authVM = Provider.of<AuthViewModel>(context);
-    // Dynamic Colors based on Theme
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Premium Colors
     final textColor = isDark ? Colors.white : Colors.black;
-    final subTextColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    final subColor = Colors.grey;
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Center(
-            child: SingleChildScrollView(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // 1. Logo (Icon changes color automatically)
-                    Icon(
-                      Icons.shopping_bag_outlined,
-                      size: 80,
-                      color: textColor, // ✅ Dynamic Color
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 1. BRAND LOGO (Text Based for Luxury Feel)
+                  Text(
+                    "WINDIGO",
+                    style: GoogleFonts.poppins(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 5,
+                      color: textColor,
                     ),
-                    const SizedBox(height: 16),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "PREMIUM FOOTWEAR",
+                    style: TextStyle(
+                        fontSize: 12,
+                        letterSpacing: 2,
+                        color: subColor
+                    ),
+                  ),
 
-                    // 2. Headings
-                    Text(
-                      "Welcome Back!",
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: textColor, // ✅ Dynamic Color
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Login to continue shopping",
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: subTextColor, // ✅ Dynamic Grey
-                      ),
-                    ),
-                    const SizedBox(height: 40),
+                  const SizedBox(height: 50),
 
-                    // 3. Inputs
-                    CustomTextField(
-                      controller: _emailController,
-                      label: "Email",
-                      hint: "Enter your email",
-                      keyboardType: TextInputType.emailAddress,
-                      validator: AppValidators.validateEmail,
-                      suffixIcon: const Icon(Icons.email_outlined),
-                    ),
-                    CustomTextField(
-                      controller: _passwordController,
-                      label: "Password",
-                      hint: "Enter your password",
-                      isPassword: true,
-                      validator: AppValidators.validatePassword,
-                      suffixIcon: const Icon(Icons.lock_outline),
-                    ),
+                  // 2. INPUT FIELDS
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text("LOG IN", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: textColor)),
+                  ),
+                  const SizedBox(height: 20),
 
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {},
-                        child: const Text("Forgot Password?"),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+                  CustomTextField(
+                    controller: _emailController,
+                    label: "Email Address",
+                    hint: "hello@example.com",
+                    keyboardType: TextInputType.emailAddress,
+                    validator: AppValidators.validateEmail,
+                    suffixIcon: const Icon(Icons.email_outlined),
+                  ),
+                  CustomTextField(
+                    controller: _passwordController,
+                    label: "Password",
+                    hint: "••••••••",
+                    isPassword: true,
+                    validator: AppValidators.validatePassword,
+                    suffixIcon: const Icon(Icons.lock_outline),
+                  ),
 
-                    // 4. Button
-                    CustomButton(
-                      text: "Login",
-                      isLoading: authVM.isLoading,
+                  // Forgot Password
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
                       onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          authVM.login(
-                            _emailController.text.trim(),
-                            _passwordController.text.trim(),
-                            context,
-                          );
-                        }
+                        // Future feature
                       },
+                      child: const Text("Forgot Password?", style: TextStyle(color: Colors.grey)),
                     ),
+                  ),
 
-                    const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-                    // 5. Register Link
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text("Don't have an account?", style: TextStyle(color: subTextColor)),
-                        TextButton(
-                          onPressed: () => Navigator.pushNamed(context, AppRoutes.register),
-                          child: const Text("Register", style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
+                  // 3. LOGIN BUTTON
+                  CustomButton(
+                    text: "LOG IN",
+                    isLoading: authVM.isLoading,
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        authVM.login(
+                          _emailController.text.trim(),
+                          _passwordController.text.trim(),
+                          context,
+                        );
+                      }
+                    },
+                  ),
 
-                    // 6. Admin Link
-                    const SizedBox(height: 40),
-                    Center(
-                      child: InkWell(
-                        onTap: () => Navigator.pushNamed(context, AppRoutes.adminLogin),
+                  const SizedBox(height: 30),
+
+                  // 4. REGISTER LINK
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text("New to Windigo? ", style: TextStyle(color: subColor)),
+                      GestureDetector(
+                        onTap: () => Navigator.pushNamed(context, AppRoutes.register),
                         child: Text(
-                          "Admin Portal Access",
-                          style: TextStyle(
-                            color: subTextColor,
-                            fontSize: 12,
-                            decoration: TextDecoration.underline,
-                          ),
+                          "Create Account",
+                          style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
                         ),
                       ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 50),
+
+                  // 5. ADMIN PORTAL (Subtle)
+                  TextButton(
+                    onPressed: () => Navigator.pushNamed(context, AppRoutes.adminLogin),
+                    child: const Text(
+                      "Admin Access",
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

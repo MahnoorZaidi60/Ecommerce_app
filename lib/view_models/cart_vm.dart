@@ -1,66 +1,85 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import '../models/product_model.dart';
 import '../models/cart_model.dart';
 import '../models/order_model.dart';
+import '../models/product_model.dart';
 import '../services/database_service.dart';
-import '../services/auth_service.dart';
+import '../core/utils/routes.dart';
 
 class CartViewModel with ChangeNotifier {
   final DatabaseService _dbService = DatabaseService();
-  final AuthService _authService = AuthService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Internal Cart Storage (ProductId -> CartItem)
-  final Map<String, CartItemModel> _cartItems = {};
+  // 🛒 Internal Storage: LIST is better for Sizes (Map is hard for composite keys)
+  final List<CartItemModel> _cartItems = [];
 
   // Getters
-  Map<String, CartItemModel> get cartItems => _cartItems;
+  List<CartItemModel> get cartItems => _cartItems;
 
   int get itemCount => _cartItems.length;
 
   double get totalAmount {
-    var total = 0.0;
-    _cartItems.forEach((key, item) {
+    double total = 0.0;
+    for (var item in _cartItems) {
       total += item.price * item.quantity;
-    });
+    }
     return total;
   }
 
-  // --- ACTIONS ---
+  // ======================================================
+  // 👟 CART ACTIONS (Handle Shoe Sizes)
+  // ======================================================
 
-  void addToCart(ProductModel product) {
-    if (_cartItems.containsKey(product.id)) {
-      // If already in cart, increase quantity
-      _cartItems.update(
-        product.id,
-            (existing) => CartItemModel(
-          productId: existing.productId,
-          name: existing.name,
-          imageUrl: existing.imageUrl,
-          price: existing.price,
-          quantity: existing.quantity + 1,
-        ),
-      );
+  void addToCart(ProductModel product, String selectedSize) {
+    // Check: Kya yeh Product ID + Yeh Size pehle se hai?
+    int index = _cartItems.indexWhere((item) =>
+    item.productId == product.id && item.selectedSize == selectedSize);
+
+    if (index >= 0) {
+      // ✅ Agar hai, Quantity barha do
+      _cartItems[index].quantity++;
     } else {
-      // Add new item
-      _cartItems.putIfAbsent(
-        product.id,
-            () => CartItemModel(
-          productId: product.id,
-          name: product.name,
-          imageUrl: product.imageUrl,
-          price: product.price,
-          quantity: 1,
-        ),
-      );
+      // 🆕 Agar nahi, Naya Item add karo
+      _cartItems.add(CartItemModel(
+        productId: product.id,
+        name: product.name,
+        imageUrl: product.imageUrl,
+        price: product.price,
+        selectedSize: selectedSize, // Saving Size
+        quantity: 1,
+      ));
     }
-    Fluttertoast.showToast(msg: "Added to Cart");
+
+    notifyListeners();
+    Fluttertoast.showToast(msg: "Added to Cart (Size: $selectedSize)");
+  }
+
+  void removeFromCart(CartItemModel item) {
+    // Remove specific item (ID + Size match)
+    _cartItems.removeWhere((element) =>
+    element.productId == item.productId && element.selectedSize == item.selectedSize);
     notifyListeners();
   }
 
-  void removeFromCart(String productId) {
-    _cartItems.remove(productId);
-    notifyListeners();
+  void decreaseQuantity(CartItemModel item) {
+    int index = _cartItems.indexOf(item);
+    if (index >= 0) {
+      if (_cartItems[index].quantity > 1) {
+        _cartItems[index].quantity--;
+      } else {
+        _cartItems.removeAt(index); // 0 hua toh uda do
+      }
+      notifyListeners();
+    }
+  }
+
+  void increaseQuantity(CartItemModel item) {
+    int index = _cartItems.indexOf(item);
+    if (index >= 0) {
+      _cartItems[index].quantity++;
+      notifyListeners();
+    }
   }
 
   void clearCart() {
@@ -68,21 +87,27 @@ class CartViewModel with ChangeNotifier {
     notifyListeners();
   }
 
-  // --- CHECKOUT ---
+  // ======================================================
+  // 📦 CHECKOUT (Place Order)
+  // ======================================================
 
   bool _isPlacingOrder = false;
   bool get isPlacingOrder => _isPlacingOrder;
 
-  Future<void> placeOrder(BuildContext context) async {
-    final user = _authService.currentUser;
+  Future<void> placeOrder(BuildContext context, String shippingAddress) async {
+    final user = _auth.currentUser;
 
+    // Validations
     if (user == null) {
       Fluttertoast.showToast(msg: "Please login to place order");
       return;
     }
-
     if (_cartItems.isEmpty) {
       Fluttertoast.showToast(msg: "Cart is empty");
+      return;
+    }
+    if (shippingAddress.isEmpty || shippingAddress.length < 5) {
+      Fluttertoast.showToast(msg: "Please enter a valid address");
       return;
     }
 
@@ -90,28 +115,26 @@ class CartViewModel with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Create Order Object
-      final order = OrderModel(
-        orderId: '', // Firebase will generate ID
+      // 1. Send Order to Database
+      await _dbService.placeOrder(
         userId: user.uid,
-        totalAmount: totalAmount,
-        status: "Pending",
-        date: DateTime.now(),
-        items: _cartItems.values.toList(),
+        userName: user.email?.split('@')[0] ?? "User", // Email ka pehla hissa as Name
+        address: shippingAddress,
+        total: totalAmount,
+        items: _cartItems,
       );
 
-      // Send to Firebase
-      await _dbService.placeOrder(order);
-
-      clearCart(); // Empty cart locally
+      // 2. Success Logic
+      clearCart();
       Fluttertoast.showToast(msg: "Order Placed Successfully!");
 
-      if(context.mounted) {
-        Navigator.pop(context); // Close checkout screen
+      if (context.mounted) {
+        // Go back to Home or Order History
+        Navigator.popUntil(context, (route) => route.isFirst);
       }
 
     } catch (e) {
-      Fluttertoast.showToast(msg: "Failed to place order: $e");
+      Fluttertoast.showToast(msg: "Failed: $e");
     } finally {
       _isPlacingOrder = false;
       notifyListeners();

@@ -11,15 +11,16 @@ class AppTheme {
     useMaterial3: true,
     brightness: Brightness.light,
     primaryColor: AppColors.primary,
-    scaffoldBackgroundColor: AppColors.white,
+    scaffoldBackgroundColor: AppColors.scaffoldBackground,
 
-    // Font
+    // Font (Poppins is perfect for Fashion)
     fontFamily: GoogleFonts.poppins().fontFamily,
     textTheme: GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme),
 
-    // App Bar (White with Black Title)
+    // App Bar (Clean White)
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.white,
+      surfaceTintColor: Colors.transparent, // Removes scroll tint
       elevation: 0,
       centerTitle: true,
       iconTheme: IconThemeData(color: AppColors.black),
@@ -27,33 +28,48 @@ class AppTheme {
         color: AppColors.black,
         fontSize: 18,
         fontWeight: FontWeight.bold,
+        fontFamily: 'Poppins',
       ),
     ),
 
-    // Inputs (Black Border when focused)
+    // Inputs (Soft Grey Fill, Black Border on Focus)
     inputDecorationTheme: _inputDecoration(
-      fillColor: Colors.grey.shade50,
-      borderColor: Colors.grey.shade300,
+      fillColor: AppColors.inputFill,
+      borderColor: Colors.transparent, // No border by default (cleaner)
       focusColor: AppColors.black,
     ),
 
-    // Buttons (Black Button, White Text)
+    // Buttons (Pitch Black)
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.black, // BLACK BUTTON
-        foregroundColor: AppColors.white, // WHITE TEXT
+        backgroundColor: AppColors.black,
+        foregroundColor: AppColors.white,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        elevation: 0, // Flat premium look
+        textStyle: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
       ),
+    ),
+
+    // Chips (For Shoe Sizes: US 7, US 8...)
+    chipTheme: ChipThemeData(
+      backgroundColor: AppColors.inputFill,
+      labelStyle: const TextStyle(color: AppColors.black),
+      selectedColor: AppColors.black,
+      secondaryLabelStyle: const TextStyle(color: AppColors.white),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      side: BorderSide.none,
     ),
 
     // Cards
     cardTheme: CardThemeData(
       color: AppColors.white,
-      elevation: 2,
-      shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 0, // Flat modern look (we will add custom shadows if needed)
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200), // Subtle border
+      ),
     ),
   );
 
@@ -64,7 +80,7 @@ class AppTheme {
     useMaterial3: true,
     brightness: Brightness.dark,
     primaryColor: Colors.white,
-    scaffoldBackgroundColor: const Color(0xFF000000), // Pure Black BG
+    scaffoldBackgroundColor: Colors.black, // True Black
 
     // Font
     fontFamily: GoogleFonts.poppins().fontFamily,
@@ -75,36 +91,57 @@ class AppTheme {
 
     // App Bar
     appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFF000000),
+      backgroundColor: Colors.black,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
       centerTitle: true,
       iconTheme: IconThemeData(color: Colors.white),
-      titleTextStyle: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+      titleTextStyle: TextStyle(
+        color: Colors.white,
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        fontFamily: 'Poppins',
+      ),
     ),
 
     // Inputs
     inputDecorationTheme: _inputDecoration(
       fillColor: const Color(0xFF1F1F1F),
-      borderColor: Colors.grey.shade800,
+      borderColor: Colors.transparent,
       focusColor: Colors.white,
     ),
 
-    // Buttons (WHITE BUTTON, BLACK TEXT) -> Taake Dark mode mein chamke
+    // Buttons (White Button on Black BG)
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white, // WHITE BUTTON
-        foregroundColor: Colors.black, // BLACK TEXT
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        elevation: 0,
+        textStyle: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
       ),
+    ),
+
+    // Chips (For Shoe Sizes in Dark Mode)
+    chipTheme: ChipThemeData(
+      backgroundColor: const Color(0xFF1F1F1F),
+      labelStyle: const TextStyle(color: Colors.white),
+      selectedColor: Colors.white,
+      secondaryLabelStyle: const TextStyle(color: Colors.black),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      side: BorderSide.none,
     ),
 
     // Cards
     cardTheme: CardThemeData(
-      color: const Color(0xFF1F1F1F), // Dark Grey Card
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: const Color(0xFF121212),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade900),
+      ),
     ),
 
     iconTheme: const IconThemeData(color: Colors.white),
@@ -119,10 +156,10 @@ class AppTheme {
     return InputDecorationTheme(
       filled: true,
       fillColor: fillColor,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor, width: 1)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: focusColor, width: 2)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: focusColor, width: 1.5)),
       errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red, width: 1)),
     );
   }

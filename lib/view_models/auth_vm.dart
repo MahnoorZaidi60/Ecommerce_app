@@ -1,73 +1,106 @@
-import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/auth_service.dart';
-import '../services/database_service.dart';
-import '../models/user_model.dart';
+import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../core/utils/routes.dart';
-import 'package:fluttertoast/fluttertoast.dart'; // For error popups
+import '../models/user_model.dart';
 
 class AuthViewModel with ChangeNotifier {
-  final AuthService _authService = AuthService();
-  final DatabaseService _dbService = DatabaseService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  // Helper to toggle spinner
-  void _setLoading(bool value) {
-    _isLoading = value;
+  void setLoading(bool val) {
+    _isLoading = val;
     notifyListeners();
   }
 
-  // --- LOGIN ---
+  // ✅ LOGIN FUNCTION
   Future<void> login(String email, String password, BuildContext context) async {
-    _setLoading(true);
+    setLoading(true);
     try {
-      await _authService.signIn(email: email, password: password);
+      // 1. Firebase Auth Login
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-      if (!context.mounted) return;
-      // Success -> Go to Home
-      Navigator.pushReplacementNamed(context, AppRoutes.mainNav);
+      // 2. Check Firestore for Admin Role
+      DocumentSnapshot doc = await _db.collection('users').doc(userCredential.user!.uid).get();
 
-    } catch (e) {
-      Fluttertoast.showToast(msg: e.toString(), backgroundColor: Colors.red);
-    } finally {
-      _setLoading(false);
-    }
-  }
+      setLoading(false); // Stop Loading
 
-  // --- REGISTER ---
-  Future<void> register(String email, String password, String name, BuildContext context) async {
-    _setLoading(true);
-    try {
-      // 1. Create Auth User
-      User? user = await _authService.signUp(email: email, password: password);
-
-      if (user != null) {
-        // 2. Save User Details to Firestore
-        UserModel newUser = UserModel(
-          uid: user.uid,
-          email: email,
-          name: name,
-        );
-        await _dbService.saveUserData(newUser);
+      if (doc.exists) {
+        UserModel user = UserModel.fromMap(doc.data() as Map<String, dynamic>, userCredential.user!.uid);
 
         if (!context.mounted) return;
-        // Success -> Go to Home (or Login)
+
+        if (user.isAdmin) {
+          // 👑 Admin -> Dashboard
+          Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
+        } else {
+          // 👤 User -> Home
+          Navigator.pushReplacementNamed(context, AppRoutes.mainNav);
+        }
+      } else {
+        // Fallback if data missing
         Navigator.pushReplacementNamed(context, AppRoutes.mainNav);
       }
+
+    } on FirebaseAuthException catch (e) {
+      setLoading(false); // Stop Loading on Error
+      Fluttertoast.showToast(msg: e.message ?? "Login Failed", backgroundColor: Colors.red);
     } catch (e) {
-      Fluttertoast.showToast(msg: e.toString(), backgroundColor: Colors.red);
-    } finally {
-      _setLoading(false);
+      setLoading(false);
+      Fluttertoast.showToast(msg: "Something went wrong", backgroundColor: Colors.red);
+      debugPrint("Login Error: $e");
     }
   }
 
-  // --- LOGOUT ---
+  // ✅ REGISTER FUNCTION
+  Future<void> register(String email, String password, String name, String phone, String address, BuildContext context) async {
+    setLoading(true);
+    try {
+      // 1. Create User in Auth
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // 2. Create User Model
+      UserModel newUser = UserModel(
+        uid: userCredential.user!.uid,
+        name: name,
+        email: email,
+        phone: phone,
+        address: address,
+        isAdmin: false, // Default User
+      );
+
+      // 3. Save to Firestore
+      await _db.collection('users').doc(newUser.uid).set(newUser.toMap());
+
+      setLoading(false);
+
+      if (!context.mounted) return;
+      Fluttertoast.showToast(msg: "Account Created! Please Login.");
+      Navigator.pop(context); // Go back to Login
+
+    } on FirebaseAuthException catch (e) {
+      setLoading(false);
+      Fluttertoast.showToast(msg: e.message ?? "Registration Failed", backgroundColor: Colors.red);
+    } catch (e) {
+      setLoading(false);
+      Fluttertoast.showToast(msg: "Error: $e", backgroundColor: Colors.red);
+    }
+  }
+
+  // 🚪 LOGOUT
   Future<void> logout(BuildContext context) async {
-    await _authService.signOut();
+    await _auth.signOut();
     if (!context.mounted) return;
-    // Clear stack and go to login
     Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (route) => false);
   }
 }

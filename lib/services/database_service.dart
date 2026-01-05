@@ -1,75 +1,130 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user_model.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // ✅ Added for User ID
 import '../models/product_model.dart';
+import '../models/cart_model.dart';
 import '../models/order_model.dart';
 
 class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance; // ✅ Auth Instance
 
-  // ---------------- USER DATA ----------------
+  // Collection References
+  CollectionReference get _productsRef => _db.collection('products');
+  CollectionReference get _ordersRef => _db.collection('orders');
 
-  // Save User Details (Name, Phone) after Signup
-  Future<void> saveUserData(UserModel user) async {
-    await _db.collection('users').doc(user.uid).set(user.toMap());
+  // ======================================================
+  // 👟 1. PRODUCTS (SHOES)
+  // ======================================================
+
+  // A. Add Product (Admin)
+  Future<void> addProduct(ProductModel product) async {
+    DocumentReference docRef = _productsRef.doc(); // Generate ID
+
+    ProductModel newProduct = ProductModel(
+      id: docRef.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      imageUrl: product.imageUrl,
+      category: product.category,
+      availableSizes: product.availableSizes,
+      isSale: product.isSale,
+    );
+
+    await docRef.set(newProduct.toMap());
   }
 
-  // Get User Details
-  Future<UserModel?> getUserData(String uid) async {
-    DocumentSnapshot doc = await _db.collection('users').doc(uid).get();
-    if (doc.exists) {
-      return UserModel.fromMap(doc.data() as Map<String, dynamic>, uid);
-    }
-    return null;
+  // B. Delete Product
+  Future<void> deleteProduct(String id) async {
+    await _productsRef.doc(id).delete();
   }
 
-  // ---------------- PRODUCTS ----------------
-
-  // Get All Products (Real-time Stream)
-  Stream<List<ProductModel>> getProducts() {
-    return _db.collection('products').snapshots().map((snapshot) {
+  // C. Stream ALL Products (For Shop Page)
+  Stream<List<ProductModel>> get productsStream {
+    return _productsRef.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
-        return ProductModel.fromMap(doc.data(), doc.id);
+        return ProductModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
       }).toList();
     });
   }
 
-  // Add Product (Admin Only)
-  Future<void> addProduct(ProductModel product) async {
-    await _db.collection('products').add(product.toMap());
+  // D. Stream FLASH SALE Products (For Home Slider)
+  Stream<List<ProductModel>> get saleProductsStream {
+    return _productsRef.where('isSale', isEqualTo: true).snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return ProductModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    });
   }
 
-  // Delete Product (Admin Only)
-  Future<void> deleteProduct(String productId) async {
-    await _db.collection('products').doc(productId).delete();
+  // ======================================================
+  // 📦 2. ORDERS (Checkout & Admin)
+  // ======================================================
+
+  // A. Place Order
+  Future<void> placeOrder({
+    required String userId,
+    required String userName,
+    required String address,
+    required double total,
+    required List<CartItemModel> items,
+  }) async {
+    DocumentReference docRef = _ordersRef.doc();
+
+    OrderModel newOrder = OrderModel(
+      orderId: docRef.id,
+      userId: userId,
+      userName: userName,
+      totalAmount: total,
+      status: "Pending",
+      date: DateTime.now(),
+      shippingAddress: address,
+      items: items,
+    );
+
+    await docRef.set(newOrder.toMap());
   }
 
-  // ---------------- ORDERS ----------------
+  // B. Get My Orders (User History) - ✅ FIXED
+  Stream<List<OrderModel>> getUserOrders() {
+    try {
+      final String? uid = _auth.currentUser?.uid;
 
-  // Place New Order
-  Future<void> placeOrder(OrderModel order) async {
-    await _db.collection('orders').add(order.toMap());
+      if (uid == null) {
+        return Stream.value([]);
+      }
+
+      // Note: Maine orderBy hata diya hai taake Index error na aaye.
+      return _ordersRef
+          .where('userId', isEqualTo: uid)
+          .snapshots()
+          .map((snapshot) {
+        return snapshot.docs.map((doc) {
+          return OrderModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        }).toList();
+      });
+
+    } catch (e) {
+      // ignore: avoid_print
+      print("Error fetching user orders: $e");
+      return Stream.value([]);
+    }
   }
 
-  // Get My Orders (For User History)
-  Stream<List<OrderModel>> getUserOrders(String userId) {
-    return _db
-        .collection('orders')
-        .where('userId', isEqualTo: userId)
-        .orderBy('date', descending: true) // Newest first
+  // C. Get ALL Orders (Admin Dashboard)
+  Stream<List<OrderModel>> getAllOrders() {
+    return _ordersRef
+        .orderBy('date', descending: true)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {
-        return OrderModel.fromMap(doc.data(), doc.id);
+        return OrderModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
       }).toList();
     });
   }
 
-  // Get ALL Orders (For Admin Dashboard)
-  Stream<List<OrderModel>> getAllOrders() {
-    return _db.collection('orders').orderBy('date', descending: true).snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return OrderModel.fromMap(doc.data(), doc.id);
-      }).toList();
-    });
+  // D. Update Order Status (Admin Feature)
+  Future<void> updateOrderStatus(String orderId, String newStatus) async {
+    await _ordersRef.doc(orderId).update({'status': newStatus});
   }
 }

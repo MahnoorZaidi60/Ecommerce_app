@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/utils/routes.dart';
-import '../../../../core/utils/validators.dart';
-import '../../../../view_models/auth_vm.dart';
-import '../../shared/custom_textfield.dart';
+
+import '../../../core/utils/routes.dart';
+import '../../../core/utils/validators.dart';
+import '../../../view_models/auth_vm.dart';
 import '../../shared/custom_button.dart';
+import '../../shared/custom_textfield.dart';
+
 
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
@@ -15,112 +17,125 @@ class RegisterView extends StatefulWidget {
 }
 
 class _RegisterViewState extends State<RegisterView> {
+  // Controllers
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController(); // 📞 Added Phone
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
   final _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
     final authVM = Provider.of<AuthViewModel>(context);
-
-    // Dynamic Colors
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black;
-    final subTextColor = isDark ? Colors.grey[400] : Colors.grey[600];
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: textColor), // Back button color
+        iconTheme: IconThemeData(color: textColor),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Center(
-            child: SingleChildScrollView(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      "Create Account",
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: textColor, // ✅ Fixed
-                      ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  // 1. HEADER
+                  Text(
+                    "CREATE ACCOUNT",
+                    style: GoogleFonts.poppins(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2,
+                      color: textColor,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Join Windigo and start shopping",
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: subTextColor, // ✅ Fixed
-                      ),
-                    ),
-                    const SizedBox(height: 40),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Join the exclusive club.",
+                    style: TextStyle(color: Colors.grey.shade500),
+                  ),
 
-                    CustomTextField(
-                      controller: _nameController,
-                      label: "Full Name",
-                      hint: "Enter your full name",
-                      validator: AppValidators.validateName,
-                      suffixIcon: const Icon(Icons.person_outline),
-                    ),
+                  const SizedBox(height: 40),
 
-                    CustomTextField(
-                      controller: _emailController,
-                      label: "Email",
-                      hint: "Enter your email",
-                      keyboardType: TextInputType.emailAddress,
-                      validator: AppValidators.validateEmail,
-                      suffixIcon: const Icon(Icons.email_outlined),
-                    ),
+                  // 2. FORM FIELDS
+                  CustomTextField(
+                    controller: _nameController,
+                    label: "Full Name",
+                    hint: "e.g. John Doe",
+                    validator: AppValidators.validateName,
+                    suffixIcon: const Icon(Icons.person_outline),
+                  ),
+                  CustomTextField(
+                    controller: _phoneController,
+                    label: "Phone Number",
+                    hint: "e.g. +92 300 1234567",
+                    keyboardType: TextInputType.phone,
+                    validator: (val) => val!.length < 10 ? "Enter valid phone" : null,
+                    suffixIcon: const Icon(Icons.phone_outlined),
+                  ),
+                  CustomTextField(
+                    controller: _emailController,
+                    label: "Email Address",
+                    hint: "hello@example.com",
+                    keyboardType: TextInputType.emailAddress,
+                    validator: AppValidators.validateEmail,
+                    suffixIcon: const Icon(Icons.email_outlined),
+                  ),
+                  CustomTextField(
+                    controller: _passwordController,
+                    label: "Password",
+                    hint: "Minimum 6 characters",
+                    isPassword: true,
+                    validator: AppValidators.validatePassword,
+                    suffixIcon: const Icon(Icons.lock_outline),
+                  ),
 
-                    CustomTextField(
-                      controller: _passwordController,
-                      label: "Password",
-                      hint: "Create a password",
-                      isPassword: true,
-                      validator: AppValidators.validatePassword,
-                      suffixIcon: const Icon(Icons.lock_outline),
-                    ),
+                  const SizedBox(height: 30),
 
-                    const SizedBox(height: 30),
+                  // 3. SIGN UP BUTTON
+                  CustomButton(
+                    text: "SIGN UP",
+                    isLoading: authVM.isLoading,
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        authVM.register(
+                          _emailController.text.trim(),
+                          _passwordController.text.trim(),
+                          _nameController.text.trim(),
+                          _phoneController.text.trim(), // 📞 Passed Phone
+                          "", // 🏠 Address empty for now (Add at Checkout)
+                          context,
+                        );
+                      }
+                    },
+                  ),
 
-                    CustomButton(
-                      text: "Sign Up",
-                      isLoading: authVM.isLoading,
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          authVM.register(
-                            _emailController.text.trim(),
-                            _passwordController.text.trim(),
-                            _nameController.text.trim(),
-                            context,
-                          );
-                        }
-                      },
-                    ),
+                  const SizedBox(height: 20),
 
-                    const SizedBox(height: 20),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text("Already have an account?", style: TextStyle(color: subTextColor)),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("Login", style: TextStyle(fontWeight: FontWeight.bold)),
+                  // 4. LOGIN LINK
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text("Already a member? ", style: TextStyle(color: Colors.grey.shade600)),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Text(
+                          "Log In",
+                          style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+                ],
               ),
             ),
           ),

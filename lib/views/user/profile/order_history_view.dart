@@ -1,234 +1,205 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_strings.dart';
 import '../../../../models/order_model.dart';
-import '../../../../services/auth_service.dart';
-import '../../../../services/database_service.dart';
 import '../../../../view_models/auth_vm.dart';
+import '../../../../view_models/order_vm.dart';
 
 class OrderHistoryView extends StatelessWidget {
   const OrderHistoryView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context, listen: false); // Direct service access for ID
-    final dbService = DatabaseService();
     final authVM = Provider.of<AuthViewModel>(context);
+    final orderVM = Provider.of<OrderViewModel>(context);
 
-    // Get current user ID
-    final userId = authService.currentUser?.uid;
-
-    if (userId == null) {
-      return const Center(child: Text("Please login to view orders"));
-    }
+    // Theme Logic
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black;
+    final bgColor = isDark ? Colors.black : const Color(0xFFF9F9F9);
 
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text("My Profile & Orders"),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          "MY ORDERS",
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 2,
+            color: textColor,
+            fontSize: 16,
+          ),
+        ),
         actions: [
           // Logout Button
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.red),
-            tooltip: "Logout",
             onPressed: () {
-              // Show confirmation dialog
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text("Logout"),
-                  content: const Text("Are you sure you want to logout?"),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text("Cancel"),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(ctx); // Close dialog
-                        authVM.logout(context); // Perform logout
-                      },
-                      child: const Text("Logout", style: TextStyle(color: Colors.red)),
-                    ),
-                  ],
-                ),
-              );
+              _showLogoutDialog(context, authVM);
             },
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // 1. User Info Header (Simple)
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: AppColors.primary.withOpacity(0.1),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  backgroundColor: AppColors.primary,
-                  radius: 30,
-                  child: Icon(Icons.person, color: Colors.white, size: 30),
-                ),
-                const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      authService.currentUser?.email ?? "User",
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      body: StreamBuilder<List<OrderModel>>(
+        stream: orderVM.myOrdersStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final orders = snapshot.data ?? [];
+
+          if (orders.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.shopping_bag_outlined, size: 80, color: Colors.grey.shade300),
+                  const SizedBox(height: 20),
+                  Text(
+                    "NO HISTORY YET",
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                      color: Colors.grey,
                     ),
-                    const Text("Customer", style: TextStyle(color: Colors.grey)),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: orders.length,
+            itemBuilder: (context, index) {
+              final order = orders[index];
+              // Native Date Formatting (No intl package needed)
+              final dateStr = "${order.date.day}/${order.date.month}/${order.date.year}";
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
-
-          const Divider(height: 1),
-
-          // 2. Orders List Title
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Order History",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-
-          // 3. Orders Stream
-          Expanded(
-            child: StreamBuilder<List<OrderModel>>(
-              stream: dbService.getUserOrders(userId),
-              builder: (context, snapshot) {
-                // Loading State
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                // Error State
-                if (snapshot.hasError) {
-                  return Center(child: Text("Error: ${snapshot.error}"));
-                }
-
-                // Empty State
-                final orders = snapshot.data ?? [];
-                if (orders.isEmpty) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.history, size: 60, color: Colors.grey),
-                        SizedBox(height: 10),
-                        Text("No orders placed yet"),
-                      ],
+                child: ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(order.status).withOpacity(0.1),
+                      shape: BoxShape.circle,
                     ),
-                  );
-                }
+                    child: Icon(
+                      _getStatusIcon(order.status),
+                      color: _getStatusColor(order.status),
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    "Order #${order.orderId.substring(0, 5).toUpperCase()}",
+                    style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
+                  ),
+                  subtitle: Text(
+                    "$dateStr • ${order.items.length} Items",
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                  trailing: Text(
+                    "PKR ${order.totalAmount.toStringAsFixed(0)}",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor),
+                  ),
+                  children: [
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ...order.items.map((item) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text("${item.quantity}x ${item.name}", style: TextStyle(color: Colors.grey.shade600)),
+                                Text("PKR ${item.price.toStringAsFixed(0)}", style: TextStyle(color: textColor, fontWeight: FontWeight.w500)),
+                              ],
+                            ),
+                          )),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text("Status:", style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text(
+                                order.status.toUpperCase(),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: _getStatusColor(order.status)
+                                ),
+                              ),
+                            ],
+                          )
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
 
-                // List Data
-                return ListView.builder(
-                  itemCount: orders.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemBuilder: (context, index) {
-                    final order = orders[index];
-                    return _buildOrderCard(context, order);
-                  },
-                );
-              },
-            ),
+  void _showLogoutDialog(BuildContext context, AuthViewModel authVM) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Logout?"),
+        content: const Text("Are you sure you want to exit?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              authVM.logout(context);
+            },
+            child: const Text("Logout", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
   }
 
-  // Helper Widget: Single Order Card
-  Widget _buildOrderCard(BuildContext context, OrderModel order) {
-    // Format Date (requires intl package)
-    final dateStr = DateFormat('MMM dd, yyyy - hh:mm a').format(order.date);
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.all(12),
-        // A. Header (Status & Total)
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: _getStatusColor(order.status).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            _getStatusIcon(order.status),
-            color: _getStatusColor(order.status),
-          ),
-        ),
-        title: Text(
-          "${AppStrings.currency} ${order.totalAmount.toStringAsFixed(0)}",
-          style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text("Date: $dateStr", style: const TextStyle(fontSize: 12)),
-            const SizedBox(height: 4),
-            Text(
-              "Status: ${order.status}",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: _getStatusColor(order.status),
-              ),
-            ),
-          ],
-        ),
-
-        // B. Expanded Children (List of Items bought)
-        children: order.items.map((item) {
-          return ListTile(
-            dense: true,
-            leading: const Icon(Icons.shopping_bag_outlined, size: 20),
-            title: Text(item.name),
-            trailing: Text("x${item.quantity}"),
-            subtitle: Text("${AppStrings.currency} ${item.price.toStringAsFixed(0)}"),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  // Helper: Status Colors
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'delivered':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      case 'shipped':
-        return Colors.blue;
-      default:
-        return Colors.orange; // Pending
+      case 'delivered': return Colors.green;
+      case 'cancelled': return Colors.red;
+      case 'shipped': return Colors.blue;
+      default: return Colors.orange;
     }
   }
 
-  // Helper: Status Icons
   IconData _getStatusIcon(String status) {
     switch (status.toLowerCase()) {
-      case 'delivered':
-        return Icons.check_circle_outline;
-      case 'cancelled':
-        return Icons.cancel_outlined;
-      case 'shipped':
-        return Icons.local_shipping_outlined;
-      default:
-        return Icons.hourglass_empty; // Pending
+      case 'delivered': return Icons.check_circle;
+      case 'cancelled': return Icons.cancel;
+      case 'shipped': return Icons.local_shipping;
+      default: return Icons.access_time_filled;
     }
   }
 }

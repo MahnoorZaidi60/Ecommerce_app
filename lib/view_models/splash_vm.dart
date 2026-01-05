@@ -1,34 +1,63 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/auth_service.dart';
 import '../core/utils/routes.dart';
+import '../models/user_model.dart';
 
 class SplashViewModel with ChangeNotifier {
-  final AuthService _authService = AuthService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   Future<void> init(BuildContext context) async {
-    // 1. Wait for animation (Simulated delay)
-    await Future.delayed(const Duration(seconds: 3));
+    // 1. Thoda wait karein (Logo dikhane ke liye)
+    await Future.delayed(const Duration(seconds: 2));
 
-    // 2. Check Shared Preferences (Has user seen Intro?)
+    if (!context.mounted) return;
+
+    // 2. Check: Kya User ne Onboarding dekha hai?
     final prefs = await SharedPreferences.getInstance();
     final bool isIntroSeen = prefs.getBool('isIntroSeen') ?? false;
 
-    // 3. Navigation Logic
-    if (!context.mounted) return; // Safety check
-
     if (!isIntroSeen) {
-      // Case A: First time user -> Go to Onboarding
+      // 👉 New User -> Show Onboarding
       Navigator.pushReplacementNamed(context, AppRoutes.onboarding);
     } else {
-      // Case B: Intro seen -> Check Login Status
-      if (_authService.currentUser != null) {
-        // User is logged in -> Go to Home
-        Navigator.pushReplacementNamed(context, AppRoutes.mainNav);
-      } else {
-        // User not logged in -> Go to Login
+      // 👉 Old User -> Check Login Status
+      await _checkLoginStatus(context);
+    }
+  }
+
+  // Helper: Login Check logic
+  Future<void> _checkLoginStatus(BuildContext context) async {
+    User? firebaseUser = _auth.currentUser;
+
+    if (firebaseUser != null) {
+      // 🕵️‍♂️ User Logged In hai. Check karo ADMIN hai ya nahi?
+      try {
+        DocumentSnapshot doc = await _db.collection('users').doc(firebaseUser.uid).get();
+
+        if (doc.exists) {
+          UserModel user = UserModel.fromMap(doc.data() as Map<String, dynamic>, firebaseUser.uid);
+
+          if (user.isAdmin) {
+            // 👑 Admin -> Dashboard
+            Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
+          } else {
+            // 👟 Customer -> Shop
+            Navigator.pushReplacementNamed(context, AppRoutes.mainNav);
+          }
+        } else {
+          // Data corrupt? Login par bhejo
+          Navigator.pushReplacementNamed(context, AppRoutes.login);
+        }
+      } catch (e) {
+        // Error? Login par bhejo
         Navigator.pushReplacementNamed(context, AppRoutes.login);
       }
+    } else {
+      // ❌ Not Logged in -> Go to Login Page
+      Navigator.pushReplacementNamed(context, AppRoutes.login);
     }
   }
 }

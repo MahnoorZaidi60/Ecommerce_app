@@ -1,11 +1,14 @@
+import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/product_model.dart';
-import '../../core/utils/routes.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../view_models/wishlist_vm.dart';
+
+// ✅ CORRECT IMPORT (User/Home Folder)
+import '../user/home/product_detail_view.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
@@ -14,38 +17,46 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Access Wishlist Logic
     final wishlistVM = Provider.of<WishlistViewModel>(context);
-    final isLiked = wishlistVM.isInWishlist(product.id);
+    final isLiked = wishlistVM.wishlist.any((item) => item.id == product.id);
 
     return GestureDetector(
       onTap: () {
-        // Navigate to Details Page
-        Navigator.pushNamed(context, AppRoutes.productDetail, arguments: product);
+        // ✅ CORRECT NAME: ProductDetailView (No 's')
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ProductDetailView(product: product)),
+        );
       },
       child: Card(
-        clipBehavior: Clip.antiAlias, // Clips image to rounded corners
+        clipBehavior: Clip.antiAlias,
+        elevation: 2,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Image with Wishlist Button
+            // 1. IMAGE SECTION
             Expanded(
               child: Stack(
                 children: [
-                  // Product Image
                   SizedBox(
                     width: double.infinity,
-                    child: CachedNetworkImage(
+                    height: double.infinity,
+                    child: product.imageUrl.startsWith('http')
+                        ? CachedNetworkImage(
                       imageUrl: product.imageUrl,
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: Colors.grey[200],
-                        child: const Center(child: Icon(Icons.image, color: Colors.grey)),
-                      ),
-                      errorWidget: (context, url, error) => const Icon(Icons.error),
+                      placeholder: (_, __) => Container(color: Colors.grey[200]),
+                      errorWidget: (_, __, ___) => const Icon(Icons.error),
+                    )
+                        : Image.memory(
+                      base64Decode(product.imageUrl),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(Icons.broken_image, color: Colors.grey)),
                     ),
                   ),
-                  // Heart Icon (Top Right)
+
+                  // Heart Icon
                   Positioned(
                     top: 8,
                     right: 8,
@@ -69,9 +80,9 @@ class ProductCard extends StatelessWidget {
               ),
             ),
 
-            // 2. Details (Name & Price)
+            // 2. DETAILS SECTION
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(10.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -86,9 +97,10 @@ class ProductCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     "${AppStrings.currency} ${product.price.toStringAsFixed(0)}",
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
                   ),
                 ],
